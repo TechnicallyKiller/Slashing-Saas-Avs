@@ -3,4 +3,12 @@ src = "src"
 out = "out"
 libs = ["lib"]
 
+
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+remappings = [
+        "@openzeppelin/=lib/openzeppelin-contracts-v4.9.0/",
+        "@openzeppelin-upgrades/=lib/openzeppelin-contracts-upgradeable-v4.9.0/",
+        "ds-test/=lib/ds-test/src/",
+        "forge-std/=lib/forge-std/src/",
+        "@eigen-layer/=lib/eigenlayer-contracts/src/contracts/"
+    ]
