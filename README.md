@@ -21,12 +21,77 @@ This AVS brings **automated integrity enforcement** into the EigenLayer ecosyste
 
 ## ⚙️ Architecture
 
-+------------------------+ +----------------------+ | Off-chain Bot (JS) | ---> | NodeHealthReporter | +------------------------+ +----------------------+ | v +------------------------+ | ValidatorUtils (Utils) | +------------------------+ | +------------+-------------+ | Downtime.sol | DoubleSign.sol | +-----------------------------+ | v +----------------------------+ | SlashingTriggerManager | +----------------------------+ | DelegationManager | AllocationManager (EigenLayer)
+          +---------------------------+
+          |   Off-Chain Monitoring    |
+          |     (DowntimeBot.js)     |
+          +------------+-------------+
+                       |
+                       v
+         +----------------------------+
+         |     NodeHealthReporter     |   <-- Authorized Reporter Contract
+         +------------+--------------+
+                      |
+                      v
+         +----------------------------+
+         |      ValidatorUtils        |   <-- Stores lastSeenBlock & slashed status
+         +------------+--------------+
+                      |
+     +----------------+----------------+
+     |                                 |
+     v                                 v
++-----------------+         +---------------------+
+|   Downtime.sol  |         |  DoubleSign.sol     | <-- Modular AVS rules
++-----------------+         +---------------------+
+     |                                 |
+     +-------------+  +----------------+
+                   v  v
+         +----------------------------+
+         | SlashingTriggerManager     | <-- Routes to rules & checks EigenLayer delegation
+         +----------------------------+
+                      |
+       +--------------+--------------+
+       |                             |
+       v                             v
++-------------------+      +----------------------+
+| DelegationManager |      | AllocationManager    | <-- EigenLayer Core Integration
++-------------------+      +----------------------+
+
 
 ## Directory Structure
 
+Slashing-Saas-AVS/
+│
+├── contracts/
+│   ├── core/
+│   │   └── SlashingTriggerManager.sol       # AVS logic router with Eigen integration
+│   ├── rules/
+│   │   ├── Downtime.sol                     # Rule: Monitor missed blocks
+│   │   └── DoubleSign.sol                   # Rule: Verify ECDSA double signs
+│   ├── utils/
+│   │   └── ValidatorUtils.sol               # Central storage of operator metadata
+│   ├── reporters/
+│      └── NodeHealthReporter.sol          # Off-chain reporter contract (updates health)
+│
+├── bots/
+│   ├── DowntimeBot.js                       # Sends lastSeenBlock to NodeHealthReporter
+│   ├── DoubleSignBot.js                     # Sends ECDSA proof to SlashingTriggerManager
+│   └── TriggerSlashingRouter.js             # Routes all slashing via manager
+│
+├── script/
+│   ├── Deploy.s.sol                         # Foundry deploy script for entire stack
+│   └── DeployHealthReporter.s.sol          # Optional dedicated deploy
+│
+├── frontend/                                # Optional UI for validators health
+│   └── index.html, statusTable.js (later)
+│
+├── test/                                    # Forge-based unit test folder
+│   └── SlashingTests.t.sol
+│
+├── operators.json                           # Dummy or fetched operator data
+├── .env                                     # Secrets for bot RPC, PK, contract addresses
+├── foundry.toml
+└── README.md
 
-Slashing-SaaS-AVS/ │ ├── contracts/ │ ├── utils/ │ │ └── ValidatorUtils.sol │ ├── rules/ │ │ ├── Downtime.sol │ │ └── DoubleSign.sol │ ├── core/ │ │ └── SlashingTriggerManager.sol │ ├── integrations/ │ │ └── IDelegationManager.sol, IAllocationManager.sol, etc. │ ├── bots/ │ ├── DowntimeBot.js │ ├── DoubleSignBot.js │ └── TriggerSlashingRouter.js │ ├── script/ │ ├── Deploy.s.sol │ └── DeployHealthReporter.s.sol │ ├── frontend/ (optional UI dashboard) │ └── Show slashed / healthy operators │ ├── operators.json ├── .env └── README.md
 
 
 
