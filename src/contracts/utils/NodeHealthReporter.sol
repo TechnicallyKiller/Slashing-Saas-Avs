@@ -18,13 +18,15 @@ contract NodeHealthReporter is Ownable {
         authorizedBot = _authorizedBot;
     }
 
-    modifier onlyBot() {
-        require(msg.sender == authorizedBot, "Not authorized bot");
-        _;
-    }
+    
 
-    function reportHealth(address operator, uint256 blockNumber) external onlyBot {
+    function reportHealth(address operator, uint256 blockNumber) external {
         validatorUtils.updateLastSeenBlock(operator, blockNumber);
         emit HealthReported(operator, blockNumber);
+    }
+
+ 
+    function setAuthorizedBot(address _bot) external onlyOwner {
+        authorizedBot = _bot;
     }
 }

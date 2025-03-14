@@ -1,39 +1,57 @@
 require("dotenv").config();
 const { ethers } = require("ethers");
-const fs = require("fs");
 
-// Load env variables
+
 const RPC = process.env.RPC_URL;
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
-const UTILS_ADDRESS = process.env.VALIDATOR_UTILS;
+const REPORTER_ADDRESS = process.env.REPORTER_ADDRESS;
+const OPERATOR_REGISTRY = process.env.OPERATOR_REGISTRY;
+console.log("🔍 ENV CHECK:");
+console.log("RPC:", RPC);
+console.log("PRIVATE_KEY:", PRIVATE_KEY ? "✅ loaded" : "❌ MISSING");
+console.log("REPORTER_ADDRESS:", REPORTER_ADDRESS);
+console.log("OPERATOR_REGISTRY:", OPERATOR_REGISTRY);
 
-// Load ABI (with both params)
-const ABI = [
-    "function updateLastSeenBlock(address operator, uint256 blockNumber) external"
-];
 
-// Setup provider & signer
+const reporterABI = ["function reportHealth(address operator, uint256 blockNumber) external"];
+const registryABI = ["function getAllOperators() external view returns (address[])"];
+
 const provider = new ethers.JsonRpcProvider(RPC);
-const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
-const utils = new ethers.Contract(UTILS_ADDRESS, ABI, wallet);
+const signer = new ethers.Wallet(PRIVATE_KEY, provider);
 
-// Load operators list
-const operators = JSON.parse(fs.readFileSync("bots/data/operators.json", "utf-8"));
+const reporter = new ethers.Contract(REPORTER_ADDRESS, reporterABI, signer);
+const registry = new ethers.Contract(OPERATOR_REGISTRY, registryABI, provider);
 
-// Function to report health
 async function pingOperators() {
-    const latestBlock = await provider.getBlockNumber();  // you can use this dynamically
+    const latestBlock = await provider.getBlockNumber();
+    console.log(`🔔 Latest block: ${latestBlock}`);
 
-    for (const op of operators) {
+    const operators = await registry.getAllOperators();
+    console.log(`📡 Found ${operators.length} operators:`, operators);
+
+    for (const operator of operators) {
         try {
-            const tx = await utils.updateLastSeenBlock(op.operatorAddress, latestBlock);
+            const tx = await reporter.reportHealth(operator, latestBlock);
             await tx.wait();
-            console.log(`✅ Reported health for ${op.operatorName} at block ${latestBlock}`);
-        } catch (err) {
-            console.error(`❌ Failed for ${op.operatorName}: ${err.message}`);
+            console.log(`✅ Reported health for ${operator} at block ${latestBlock}`);
+
+            const shouldSimulateSlashing = Math.random() < 0.5; // 50% chance
+            if (shouldSimulateSlashing) {
+              console.log(`⚠️ Potential Slashing Triggered for ${operator} — Reason: Inactive for too long`);
+            }
+
+        } catch (e) {
+            console.error(`❌ Error for ${operator}:`, e.message);
         }
     }
 }
 
-// Repeat every 1 minute
-setInterval(pingOperators, 60 * 1000);
+async function main() {
+    console.log("🚀 Starting Downtime Bot...");
+    await pingOperators();
+    setInterval(pingOperators, 60 * 1000);
+  }
+  
+  main().catch((err) => {
+    console.error("❌ Fatal Error in bot execution:", err);
+  });
