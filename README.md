@@ -1,66 +1,84 @@
-## Foundry
+# ⚡ Slashing-as-a-Service (SaaS) AVS on EigenLayer
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+## 🛠 Overview
 
-Foundry consists of:
+**Slashing-as-a-Service (SaaS) AVS** is a modular, EigenLayer-integrated system that monitors validator misbehavior (like **downtime** and **double-signing**) and autonomously triggers slashing through AVS logic.
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+It leverages:
+- **DelegationManager & AllocationManager** from EigenLayer Core
+- **Modular slashing rules** for scalability
+- **Off-chain bots** for real-time validator health reporting
+- **On-chain AVS enforcement layer** for actual punishment logic
 
-## Documentation
+---
 
-https://book.getfoundry.sh/
+## 🚀 Why This Project?
+> “Restaking is powerful — but slashing needs to evolve too.”
 
-## Usage
+This AVS brings **automated integrity enforcement** into the EigenLayer ecosystem, enabling restakers to hold operators accountable using customizable and pluggable slashing logic.
 
-### Build
+---
 
-```shell
-$ forge build
-```
+## ⚙️ Architecture
 
-### Test
++------------------------+ +----------------------+ | Off-chain Bot (JS) | ---> | NodeHealthReporter | +------------------------+ +----------------------+ | v +------------------------+ | ValidatorUtils (Utils) | +------------------------+ | +------------+-------------+ | Downtime.sol | DoubleSign.sol | +-----------------------------+ | v +----------------------------+ | SlashingTriggerManager | +----------------------------+ | DelegationManager | AllocationManager (EigenLayer)
 
-```shell
-$ forge test
-```
+## Directory Structure
 
-### Format
 
-```shell
-$ forge fmt
-```
+Slashing-SaaS-AVS/ │ ├── contracts/ │ ├── utils/ │ │ └── ValidatorUtils.sol │ ├── rules/ │ │ ├── Downtime.sol │ │ └── DoubleSign.sol │ ├── core/ │ │ └── SlashingTriggerManager.sol │ ├── integrations/ │ │ └── IDelegationManager.sol, IAllocationManager.sol, etc. │ ├── bots/ │ ├── DowntimeBot.js │ ├── DoubleSignBot.js │ └── TriggerSlashingRouter.js │ ├── script/ │ ├── Deploy.s.sol │ └── DeployHealthReporter.s.sol │ ├── frontend/ (optional UI dashboard) │ └── Show slashed / healthy operators │ ├── operators.json ├── .env └── README.md
 
-### Gas Snapshots
 
-```shell
-$ forge snapshot
-```
 
-### Anvil
+---
 
-```shell
-$ anvil
-```
+## 🔐 Core Concepts
+- **ValidatorUtils.sol** — Tracks metadata (last seen blocks, slashed status)
+- **NodeHealthReporter.sol** — Off-chain bots update lastSeenBlock
+- **Downtime.sol / DoubleSign.sol** — Modular slashing rules
+- **SlashingTriggerManager.sol** — Routes checks to rule contracts & integrates with EigenLayer
+- **DelegationManager.sol / AllocationManager.sol** — Enforces restaker delegation + executes slashing
 
-### Deploy
+---
 
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
+## 🚦 Slashing Rules
 
-### Cast
+| Rule | Trigger Condition | Action |
+|------|--------------------|--------|
+| **Downtime** | Operator not seen in `X` blocks | Slash if delegated |
+| **Double Sign** | Off-chain signature mismatch | Slash via trigger route |
 
-```shell
-$ cast <subcommand>
-```
+---
 
-### Help
+## 🤖 Bots
 
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+| Bot | Purpose |
+|-----|--------|
+| **DowntimeBot.js** | Periodically updates `lastSeenBlock` from off-chain |
+| **DoubleSignBot.js** | Detects signature conflict and routes slash |
+| **TriggerSlashingRouter.js** | Calls `SlashingTriggerManager` to enforce slashing routes |
+
+---
+
+## 📦 Setup & Deployment
+
+```bash
+git clone <repo_url>
+cd Slashing-SaaS-AVS
+
+# Install dependencies
+forge install
+npm install dotenv ethers
+
+# Create .env file
+RPC_URL=...
+PRIVATE_KEY=...
+REPORTER_ADDRESS=...
+OPERATOR_REGISTRY=...
+SLASHING_TRIGGER_MANAGER=...
+
+# Compile
+forge build
+
+# Deploy contracts
+forge script script/Deploy.s.sol --rpc-url $RPC_URL --broadcast --private-key $PRIVATE_KEY
