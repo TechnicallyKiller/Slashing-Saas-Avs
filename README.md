@@ -1,3 +1,4 @@
+
 # ⚡ Slashing-as-a-Service (SaaS) AVS on EigenLayer
 
 ## 🛠 Overview
@@ -13,6 +14,7 @@ It leverages:
 ---
 
 ## 🚀 Why This Project?
+
 > “Restaking is powerful — but slashing needs to evolve too.”
 
 This AVS brings **automated integrity enforcement** into the EigenLayer ecosystem, enabling restakers to hold operators accountable using customizable and pluggable slashing logic.
@@ -21,97 +23,99 @@ This AVS brings **automated integrity enforcement** into the EigenLayer ecosyste
 
 ## ⚙️ Architecture
 
-          +---------------------------+
-          |   Off-Chain Monitoring    |
-          |     (DowntimeBot.js)     |
-          +------------+-------------+
-                       |
-                       v
-         +----------------------------+
-         |     NodeHealthReporter     |   <-- Authorized Reporter Contract
-         +------------+--------------+
-                      |
-                      v
-         +----------------------------+
-         |      ValidatorUtils        |   <-- Stores lastSeenBlock & slashed status
-         +------------+--------------+
-                      |
-     +----------------+----------------+
-     |                                 |
-     v                                 v
-+-----------------+         +---------------------+
-|   Downtime.sol  |         |  DoubleSign.sol     | <-- Modular AVS rules
-+-----------------+         +---------------------+
-     |                                 |
-     +-------------+  +----------------+
-                   v  v
-         +----------------------------+
-         | SlashingTriggerManager     | <-- Routes to rules & checks EigenLayer delegation
-         +----------------------------+
-                      |
-       +--------------+--------------+
-       |                             |
-       v                             v
-+-------------------+      +----------------------+
-| DelegationManager |      | AllocationManager    | <-- EigenLayer Core Integration
-+-------------------+      +----------------------+
+```
+      +---------------------------+
+      |   Off-Chain Monitoring    |
+      |     (DowntimeBot.js)     |
+      +------------+-------------+
+                   |
+                   v
+     +----------------------------+
+     |     NodeHealthReporter     |  <-- Authorized Reporter Contract
+     +------------+--------------+
+                  |
+                  v
+     +----------------------------+
+     |      ValidatorUtils        |  <-- Stores lastSeenBlock & slashed status
+     +------------+--------------+
+                  |
+     +------------+-------------+
+     |                          |
+     v                          v
++-----------------+    +---------------------+
+|   Downtime.sol   |    |   DoubleSign.sol    |  <-- Modular AVS rules
++------------------+   +----------------------+
+         |                         |
+         +-----------+------------+
+                     v
+     +----------------------------+
+     |   SlashingTriggerManager   |  <-- Routes rules & checks delegation
+     +----------------------------+
+                  |
+     +------------+-------------+
+     |                          |
+     v                          v
++-------------------+   +----------------------+
+| DelegationManager  |   | AllocationManager    |  <-- EigenLayer Core Integration
++--------------------+   +----------------------+
+```
 
+---
 
-## Directory Structure
+## 📁 Directory Structure
 
+```
 Slashing-Saas-AVS/
 │
 ├── contracts/
 │   ├── core/
-│   │   └── SlashingTriggerManager.sol       # AVS logic router with Eigen integration
+│   │   └── SlashingTriggerManager.sol      # AVS logic router with Eigen integration
 │   ├── rules/
-│   │   ├── Downtime.sol                     # Rule: Monitor missed blocks
-│   │   └── DoubleSign.sol                   # Rule: Verify ECDSA double signs
+│   │   ├── Downtime.sol                    # Rule: Monitor missed blocks
+│   │   └── DoubleSign.sol                  # Rule: Verify ECDSA double signs
 │   ├── utils/
-│   │   └── ValidatorUtils.sol               # Central storage of operator metadata
+│   │   └── ValidatorUtils.sol              # Central storage of operator metadata
 │   ├── reporters/
-│      └── NodeHealthReporter.sol          # Off-chain reporter contract (updates health)
+│   │   └── NodeHealthReporter.sol          # Off-chain reporter contract (updates health)
+│   └── integrations/
+│       ├── IDelegationManager.sol
+│       ├── IAllocationManager.sol
+│       └── (Other core EigenLayer interfaces)
 │
 ├── bots/
-│   ├── DowntimeBot.js                       # Sends lastSeenBlock to NodeHealthReporter
-│   ├── DoubleSignBot.js                     # Sends ECDSA proof to SlashingTriggerManager
-│   └── TriggerSlashingRouter.js             # Routes all slashing via manager
+│   ├── DowntimeBot.js                      # Sends lastSeenBlock to NodeHealthReporter
+│   ├── DoubleSignBot.js                    # Sends ECDSA proof to SlashingTriggerManager
+│   └── TriggerSlashingRouter.js            # Routes all slashing via manager
 │
 ├── script/
-│   ├── Deploy.s.sol                         # Foundry deploy script for entire stack
-│   └── DeployHealthReporter.s.sol          # Optional dedicated deploy
+│   ├── Deploy.s.sol                        # Foundry deploy script for entire stack
+│   └── DeployHealthReporter.s.sol         # Optional dedicated deploy
 │
-├── frontend/                                # Optional UI for validators health
-│   └── index.html, statusTable.js (later)
+├── frontend/
+│   └── index.html                          # Optional UI for validator status
+│   └── statusTable.js                      # JS script to render validator state
 │
-├── test/                                    # Forge-based unit test folder
-│   └── SlashingTests.t.sol
+├── test/
+│   └── SlashingTests.t.sol                 # Unit tests (optional)
 │
-├── operators.json                           # Dummy or fetched operator data
-├── .env                                     # Secrets for bot RPC, PK, contract addresses
+├── operators.json                          # Dummy or fetched operator data
+├── .env                                    # Secrets for RPC, PK, contract addresses
 ├── foundry.toml
 └── README.md
-
-
-
+```
 
 ---
 
-## 🔐 Core Concepts
-- **ValidatorUtils.sol** — Tracks metadata (last seen blocks, slashed status)
-- **NodeHealthReporter.sol** — Off-chain bots update lastSeenBlock
-- **Downtime.sol / DoubleSign.sol** — Modular slashing rules
-- **SlashingTriggerManager.sol** — Routes checks to rule contracts & integrates with EigenLayer
-- **DelegationManager.sol / AllocationManager.sol** — Enforces restaker delegation + executes slashing
+## 🔐 Core Components
 
----
-
-## 🚦 Slashing Rules
-
-| Rule | Trigger Condition | Action |
-|------|--------------------|--------|
-| **Downtime** | Operator not seen in `X` blocks | Slash if delegated |
-| **Double Sign** | Off-chain signature mismatch | Slash via trigger route |
+| Component | Description |
+|----------|-------------|
+| ValidatorUtils.sol | Tracks validator metadata and slashing status |
+| NodeHealthReporter.sol | Off-chain authorized reporter updates health |
+| Downtime.sol | Slashing logic for missed blocks |
+| DoubleSign.sol | Slashing logic for ECDSA double-sign detection |
+| SlashingTriggerManager.sol | Centralized router contract for rule execution |
+| DelegationManager / AllocationManager | Core EigenLayer staking logic integration |
 
 ---
 
@@ -129,7 +133,7 @@ Slashing-Saas-AVS/
 
 ```bash
 git clone <repo_url>
-cd Slashing-SaaS-AVS
+cd Slashing-Saas-AVS
 
 # Install dependencies
 forge install
@@ -147,3 +151,25 @@ forge build
 
 # Deploy contracts
 forge script script/Deploy.s.sol --rpc-url $RPC_URL --broadcast --private-key $PRIVATE_KEY
+```
+
+---
+
+## 📈 Future Scope
+
+- Add **LatencySlashing.sol**
+- Integration with **EigenDA**
+- Real validator telemetry integration
+- Complete monitoring dashboard UI
+
+---
+
+## 🙌 Credits
+
+Inspired by EigenLayer AVS architecture and decentralized validation principles.
+
+---
+
+## 📄 License
+
+MIT License
