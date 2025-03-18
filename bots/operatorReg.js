@@ -9,6 +9,8 @@ const registryABI = [
   "function registerOperator(address operator) external"
 ];
 
+
+
 const provider = new ethers.JsonRpcProvider(RPC);
 const signer = new ethers.Wallet(PRIVATE_KEY, provider);
 const registry = new ethers.Contract(OPERATOR_REGISTRY, registryABI, signer);

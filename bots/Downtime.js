@@ -1,5 +1,7 @@
+const fs = require("fs");
 require("dotenv").config();
 const { ethers } = require("ethers");
+
 
 
 const RPC = process.env.RPC_URL;
@@ -28,23 +30,46 @@ async function pingOperators() {
 
     const operators = await registry.getAllOperators();
     console.log(`📡 Found ${operators.length} operators:`, operators);
-
+    const operatorData = [];
     for (const operator of operators) {
         try {
             const tx = await reporter.reportHealth(operator, latestBlock);
             await tx.wait();
             console.log(`✅ Reported health for ${operator} at block ${latestBlock}`);
 
-            const shouldSimulateSlashing = Math.random() < 0.5; // 50% chance
+            const shouldSimulateSlashing = Math.random() < 0.5;
+            const status = shouldSimulateSlashing ? "Slashed" : "Healthy";
+
+            operatorData.push({
+                operator: operator,
+                status: status,
+                lastCheckedBlock: latestBlock,
+                details: status === "Slashed" ? "No activity in last 100 blocks (simulated)" : "Health reported successfully"
+            });
+             // 50% chance
             if (shouldSimulateSlashing) {
               console.log(`⚠️ Potential Slashing Triggered for ${operator} — Reason: Inactive for too long`);
             }
 
         } catch (e) {
             console.error(`❌ Error for ${operator}:`, e.message);
+            operatorData.push({
+              operator: operator,
+              status: "Error",
+              lastCheckedBlock: latestBlock,
+              details: e.message
+          });
         }
     }
+    try {
+      fs.writeFileSync("../frontend/public/operators.json", JSON.stringify(operatorData, null, 2));
+      console.log("💾 operators.json updated.");
+    } catch (err) {
+      console.error("❌ Failed to write operators.json:", err.message);
+    }
 }
+
+
 
 async function main() {
     console.log("🚀 Starting Downtime Bot...");
