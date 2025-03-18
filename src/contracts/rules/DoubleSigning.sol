@@ -8,14 +8,26 @@ contract DoubleSign{
     constructor(address _validatorUtils){
         validatorUtils=ValidatorUtils(_validatorUtils);
     }
-    function isDoubleSignDetected(address operator,
-    bytes32 messageHash1,
-    bytes memory sign1,
-    bytes32 messageHash2,
-    bytes memory sign2) external view returns(bool) {
-        address signer1 = ECDSA.recover(messageHash1,sign1);
-        address signer2 = ECDSA.recover(messageHash2,sign2);
-        return (signer1 == operator && signer2 == operator && messageHash1 != messageHash2);
+    function slashIfViolated(
+    address operator,
+    bytes32 hash1,
+    bytes memory sig1,
+    bytes32 hash2,
+    bytes memory sig2
+) external returns (bool) {
+    require(hash1 != hash2, "No conflict detected");
+
+    address signer1 = ECDSA.recover(hash1, sig1);
+    address signer2 = ECDSA.recover(hash2, sig2);
+
+    require(signer1 == operator && signer2 == operator, "Invalid signatures");
+
+    if (!validatorUtils.isSlashed1(operator)) {
+        validatorUtils.markOperatorSlashed(operator);
+        return true;
     }
+
+    return false;
+}
 
 }

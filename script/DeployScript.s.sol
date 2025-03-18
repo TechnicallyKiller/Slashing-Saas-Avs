@@ -26,6 +26,15 @@ contract DeployScript is Script {
 
         address delegationManager = vm.envAddress("DELEGATION_MANAGER");
         address strategyManager = vm.envAddress("STRATEGY_MANAGER");
+        // address _validatorUtils,
+        // address _downtime,
+        // address _doubleSign,
+        // address _operatorRegistry,
+        // address _delegationManager,
+        // address _strategyManager,
+        // address _strategy,
+        // uint256 _minStrategyShareThreshold,
+        // address _allocationManager//
         
         
         uint256 minThreshold = 100;

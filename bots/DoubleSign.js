@@ -1,22 +1,42 @@
-const { ethers } = require("ethers");
-const fs = require("fs");
+const { ethers, Wallet } = require("ethers");
+require("dotenv").config();
 
-const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
-const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
-const utils = new ethers.Contract(process.env.VALIDATOR_UTILS, ["function markOperatorSlashed(address)"], wallet);
+const RPC = process.env.RPC_URL;
+const PRIVATE_KEY = process.env.PRIVATE_KEY;
+const DOUBLESIGN_CONTRACT = process.env.DOUBLESIGN_CONTRACT;
 
-const data = JSON.parse(fs.readFileSync("doubleSignOperators.json", "utf8"));
+const provider = new ethers.JsonRpcProvider(RPC);
+const signer = new Wallet(PRIVATE_KEY, provider);
 
-async function checkDoubleSign() {
-    for (let item of data) {
-        const signer1 = ethers.verifyMessage(item.message1, item.signature1);
-        const signer2 = ethers.verifyMessage(item.message2, item.signature2);
+const doubleSignABI = [
+  "function slashIfViolated(address operator, bytes32 hash1, bytes sig1, bytes32 hash2, bytes sig2) external returns (bool)"
+];
 
-        if (signer1 === signer2 && item.message1 !== item.message2) {
-            const tx = await utils.markOperatorSlashed(item.operator);
-            await tx.wait();
-            console.log(`⚠️ Slashed double-signing operator: ${item.operator}`);
-        }
-    }
+const doubleSign = new ethers.Contract(DOUBLESIGN_CONTRACT, doubleSignABI, signer);
+
+function formatSig(sig) {
+  return ethers.concat([sig.r, sig.s, ethers.toBeHex(sig.v)]);
 }
-checkDoubleSign();
+
+async function simulateDoubleSignSlashing() {
+  const operator = signer.address;
+
+  const hash1 = ethers.keccak256(ethers.toUtf8Bytes("BlockHeader_1"));
+  const hash2 = ethers.keccak256(ethers.toUtf8Bytes("BlockHeader_2"));
+
+  const sig1raw = signer.signingKey.sign(hash1);
+  const sig2raw = signer.signingKey.sign(hash2);
+
+  const sig1 = formatSig(await sig1raw);
+  const sig2 = formatSig(await sig2raw);
+
+  try {
+    const tx = await doubleSign.slashIfViolated(operator, hash1, sig1, hash2, sig2);
+    await tx.wait();
+    console.log("✅ Slashing triggered successfully");
+  } catch (err) {
+    console.error("❌ Slashing failed:", err.reason || err.message);
+  }
+}
+
+simulateDoubleSignSlashing();

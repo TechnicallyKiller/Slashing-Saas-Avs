@@ -26,4 +26,7 @@ contract OperatorRegistry {
     function totalOperators() external view returns (uint256) {
         return operators.length;
     }
+    function isOperator(address operator) external view returns(bool){
+        return isRegistered[operator];
+    }
 }

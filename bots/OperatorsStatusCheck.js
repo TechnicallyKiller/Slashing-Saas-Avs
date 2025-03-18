@@ -8,6 +8,8 @@ const DELEGATION_MANAGER = process.env.DELEGATION_MANAGER;
 const abiAlloc = ["function getOperatorAVSData(address, address) view returns (uint256,uint256,uint256)"];
 const abiDeleg = ["function getDelegation(address) view returns (uint256,uint256,bool)"];
 
+
+
 const provider = new ethers.JsonRpcProvider(RPC);
 const allocManager = new ethers.Contract(ALLOCATION_MANAGER, abiAlloc, provider);
 const delegManager = new ethers.Contract(DELEGATION_MANAGER, abiDeleg, provider);

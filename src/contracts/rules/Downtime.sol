@@ -10,11 +10,13 @@ contract Downtime{
         downtimeThreshold=downtime;
     }
 
-    function isDowntimeDetected(address operator) public  returns(bool){
+    function slashIfViolated(address operator) external returns (bool) {
         uint256 lastSeen = validatorUtils.getLastSeenBlock(operator);
-        uint256 currentBlock = block.number;
-        return (currentBlock-lastSeen>downtimeThreshold);
-
+        if (block.number > lastSeen + downtimeThreshold && !validatorUtils.isSlashed1(operator)) {
+            validatorUtils.markOperatorSlashed(operator);
+            return true;
+        }
+        return false;
     }
     
 }

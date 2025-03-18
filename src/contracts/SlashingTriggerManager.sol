@@ -5,29 +5,39 @@ import "./utils/ValidatorUtils.sol";
 import "./rules/Downtime.sol";
 import "./rules/DoubleSigning.sol";
 import "./OperatorRegistry.sol";
+
 import "@eigen-layer/interfaces/IPausable.sol";
 import "@eigen-layer/interfaces/IDelegationManager.sol";
 import "@eigen-layer/interfaces/IPermissionController.sol";
 import "@eigen-layer/interfaces/IStrategyManager.sol";
+import "@eigen-layer/interfaces/IStrategy.sol";
+import "@eigen-layer/interfaces/IAllocationManager.sol";
 
 contract SlashingTriggerManager {
-    event OperatorSlashed(address indexed operator, string reason, uint256 blockNumber);
+    // Events
+    event SlashTriggered(address indexed operator, string reason);
+    event SlashingEvaluated(address indexed operator, bool result, string rule);
     event AVSMetadata(address indexed operator, uint256 delegatedShares, address delegator);
     event AVSPaused();
     event AVSResumed();
 
+    // Core dependencies
     ValidatorUtils public validatorUtils;
     Downtime public downtime;
     DoubleSign public doubleSign;
     OperatorRegistry public operatorRegistry;
+
     IDelegationManager public delegationManager;
     IStrategyManager public strategyManager;
+    IAllocationManager public allocationManager;
+    IStrategy public strategy;
 
+    // Configs
     address public AVSAdmin;
     bool public isPaused;
     uint256 public minStrategyShareThreshold;
- 
 
+    // Modifiers
     modifier onlyAVSAdmin() {
         require(msg.sender == AVSAdmin, "Not AVS admin");
         _;
@@ -38,6 +48,7 @@ contract SlashingTriggerManager {
         _;
     }
 
+    // Constructor
     constructor(
         address _validatorUtils,
         address _downtime,
@@ -46,6 +57,7 @@ contract SlashingTriggerManager {
         address _delegationManager,
         address _strategyManager,
         uint256 _minStrategyShareThreshold
+        
     ) {
         validatorUtils = ValidatorUtils(_validatorUtils);
         downtime = Downtime(_downtime);
@@ -53,11 +65,14 @@ contract SlashingTriggerManager {
         operatorRegistry = OperatorRegistry(_operatorRegistry);
         delegationManager = IDelegationManager(_delegationManager);
         strategyManager = IStrategyManager(_strategyManager);
-        AVSAdmin = msg.sender;
         
+       
+
+        AVSAdmin = msg.sender;
         minStrategyShareThreshold = _minStrategyShareThreshold;
     }
 
+    // Admin Controls
     function pauseAVS() external onlyAVSAdmin {
         isPaused = true;
         emit AVSPaused();
@@ -68,23 +83,50 @@ contract SlashingTriggerManager {
         emit AVSResumed();
     }
 
-    function triggerSlashing(address operator, bytes32 messageHash1, bytes memory signature1, bytes32 messageHash2, bytes memory signature2) external onlyAVSAdmin notPaused {
-        require(operatorRegistry.isRegistered(operator), "Operator not registered");
+    // Slashing Routes
+    function triggerDowntimeSlashing(address operator) external notPaused {
+        require(operatorRegistry.isOperator(operator), "Not a registered operator");
 
-        address delegator = delegationManager.delegatedTo(operator);
-        require(delegator != address(0), "Operator not delegated");
+       
 
-    
+        bool result = downtime.slashIfViolated(operator);
+        emit SlashingEvaluated(operator, result, "Downtime");
 
-        bool isDown = downtime.isDowntimeDetected(operator);
-        bool isDoubleSign = doubleSign.isDoubleSignDetected(operator, messageHash1, signature1, messageHash2, signature2);
+        if (result) {
+            emit SlashTriggered(operator, "Downtime Violation");
+        }
+    }
 
-        require(isDown || isDoubleSign, "No slashing condition met");
-        require(!validatorUtils.isSlashed(operator), "Already slashed");
+    function triggerDoubleSignSlashing(
+        address operator,
+        bytes32 hash1,
+        bytes memory sig1,
+        bytes32 hash2,
+        bytes memory sig2
+    ) external notPaused {
+        require(operatorRegistry.isOperator(operator), "Not a registered operator");
 
-        validatorUtils.markOperatorSlashed(operator);
+        bool result = doubleSign.slashIfViolated(operator, hash1, sig1, hash2, sig2);
+        emit SlashingEvaluated(operator, result, "Double Sign");
 
-        emit OperatorSlashed(operator, isDown ? "Downtime" : "Double Sign", block.number);
-        
-}
+        if (result) {
+            emit SlashTriggered(operator, "Double Sign Violation");
+        }
+    }
+
+    // Strategy Insights & Governance Utilities
+  
+
+   
+    function isDelegated(address staker) public view returns (bool) {
+        return delegationManager.isDelegated(staker);
+    }
+
+    function getDelegationApprover(address operator) public view returns (address) {
+        return delegationManager.delegationApprover(operator);
+    }
+
+   
+
+
 }
