@@ -1,0 +1,20 @@
+[
+  {
+    "operator": "0x1111111111111111111111111111111111111111",
+    "status": "Healthy",
+    "lastCheckedBlock": 3513186,
+    "details": "Health reported successfully"
+  },
+  {
+    "operator": "0x2222222222222222222222222222222222222222",
+    "status": "Healthy",
+    "lastCheckedBlock": 3513186,
+    "details": "Health reported successfully"
+  },
+  {
+    "operator": "0x3333333333333333333333333333333333333333",
+    "status": "Slashed",
+    "lastCheckedBlock": 3513186,
+    "details": "No activity in last 100 blocks (simulated)"
+  }
+]
