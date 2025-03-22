@@ -16,16 +16,17 @@ contract DeployScript is Script {
         vm.startBroadcast();
         address botkey = vm.envAddress("BOT_KEY");
 
+        
+
+        address delegationManager = vm.envAddress("DELEGATION_MANAGER");
+        address strategyManager = vm.envAddress("STRATEGY_MANAGER");
         ValidatorUtils validatorUtils = new ValidatorUtils();
         console.log("validator deployed at ", address(validatorUtils));
-        OperatorRegistry operatorRegistry = new OperatorRegistry();
+        OperatorRegistry operatorRegistry = new OperatorRegistry(delegationManager);
         NodeHealthReporter reporter = new NodeHealthReporter(address(validatorUtils),botkey);
         console.log("validator deployed at ", address(reporter));
         Downtime downtime = new Downtime(address(validatorUtils), 20);
         DoubleSign doubleSign = new DoubleSign(address(validatorUtils));
-
-        address delegationManager = vm.envAddress("DELEGATION_MANAGER");
-        address strategyManager = vm.envAddress("STRATEGY_MANAGER");
         // address _validatorUtils,
         // address _downtime,
         // address _doubleSign,
