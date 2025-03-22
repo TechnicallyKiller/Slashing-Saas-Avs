@@ -69,39 +69,54 @@ Slashing-Saas-AVS/
 │
 ├── contracts/
 │   ├── core/
-│   │   └── SlashingTriggerManager.sol      # AVS logic router with Eigen integration
+│   │   └── SlashingTriggerManager.sol          # Central AVS logic & slashing router
 │   ├── rules/
-│   │   ├── Downtime.sol                    # Rule: Monitor missed blocks
-│   │   └── DoubleSign.sol                  # Rule: Verify ECDSA double signs
-│   ├── utils/
-│   │   └── ValidatorUtils.sol              # Central storage of operator metadata
+│   │   ├── Downtime.sol                        # Downtime-based slashing rule
+│   │   └── DoubleSigning.sol                   # Double-signature detection rule
 │   ├── reporters/
-│   │   └── NodeHealthReporter.sol          # Off-chain reporter contract (updates health)
-│   └── integrations/
-│       ├── IDelegationManager.sol
-│       ├── IAllocationManager.sol
-│       └── (Other core EigenLayer interfaces)
+│   │   └── NodeHealthReporter.sol              # Reports last seen block to utils
+│   ├── utils/
+│   │   └── ValidatorUtils.sol                  # Tracks last seen block, slashed status
+│   └── OperatorRegistry.sol                    # Registers operators + links metadataURI
 │
-├── bots/
-│   ├── DowntimeBot.js                      # Sends lastSeenBlock to NodeHealthReporter
-│   ├── DoubleSignBot.js                    # Sends ECDSA proof to SlashingTriggerManager
-│   └── TriggerSlashingRouter.js            # Routes all slashing via manager
+├── interfaces/                                 # Core EigenLayer contract interfaces
+│   ├── IDelegationManager.sol
+│   ├── IAllocationManager.sol
+│   ├── IStrategyManager.sol
+│   ├── IStrategy.sol
+│   └── IPermissionController.sol
 │
-├── script/
-│   ├── Deploy.s.sol                        # Foundry deploy script for entire stack
-│   └── DeployHealthReporter.s.sol         # Optional dedicated deploy
+├── bots/                                       # Off-chain JS Bots
+│   ├── Downtime.js                             # Pings health + reports downtime
+│   ├── DoubleSign.js                           # Simulates conflicting signature slashing
+│   ├── TriggerSlashingRouter.js                # Routes slashing to SlashingTriggerManager
+│   └── RegisterDummyOperators.js               # Registers dummy operators
 │
-├── frontend/
-│   └── index.html                          # Optional UI for validator status
-│   └── statusTable.js                      # JS script to render validator state
+├── script/                                     # Foundry Deploy Scripts
+│   ├── Deploy.s.sol                            # Full stack deploy: contracts + utils
+│   ├── DeployHealthReporter.s.sol              # Dedicated script for NodeHealthReporter
+│   └── DeployOperatorReg.s.sol                 # Deploy OperatorRegistry (Eigen-ready)
+│
+├── frontend/                                   # React UI (TailwindCSS + Ethers.js)
+│   ├── public/
+│   │   └── operators.json                      # Operator status, updated by bots
+│   ├── pages/
+│   │   └── Register.jsx                        # Operator registration via frontend
+│   │   └── Dashboard.jsx                       # Operator Status Dashboard UI
+│   ├── components/
+│   │   └── OperatorTable.js                    # Status table showing health, slash, etc.
+│   ├── App.jsx                                 # Root component
+│   ├── index.html                              # HTML entry point
+│   └── tailwind.config.js                      # TailwindCSS configuration
 │
 ├── test/
-│   └── SlashingTests.t.sol                 # Unit tests (optional)
+│   ├── SlashingLogic.t.sol                     # Forge tests for slashing flows
+│   └── OperatorRegistry.t.sol                  # Operator registry logic tests
 │
-├── operators.json                          # Dummy or fetched operator data
-├── .env                                    # Secrets for RPC, PK, contract addresses
-├── foundry.toml
-└── README.md
+├── .env                                        # Environment variables (RPC, PKs, Contract Addrs)
+├── foundry.toml                                # Foundry project config
+└── README.md                                   # 📘 Full project documentation
+
 ```
 
 ---
