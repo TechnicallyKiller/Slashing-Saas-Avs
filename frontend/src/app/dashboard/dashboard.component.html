@@ -1,0 +1,16 @@
+<div class="container">
+    <h1>Operator Monitoring Dashboard</h1>
+  
+    <input [(ngModel)]="operatorAddress" placeholder="Enter Operator Address" />
+  
+    <button (click)="slash()">Slash Operator</button>
+    <button (click)="downtime()">Check Downtime</button>
+    <button (click)="register()">Register Operator</button>
+    <button (click)="status()">Get Operator Status</button>
+  
+    <div *ngIf="response">
+      <h3>Response:</h3>
+      <pre>{{ response }}</pre>
+    </div>
+  </div>
+  

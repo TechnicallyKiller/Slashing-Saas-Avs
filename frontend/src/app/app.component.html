@@ -1,0 +1,18 @@
+<div class="container">
+  <h1>Slashing SaaS Control Panel</h1>
+
+  <label for="operator">Enter Operator Address:</label>
+  <input type="text" [(ngModel)]="operator" placeholder="0x...">
+  
+  <label for="message1">Message 1:</label>
+  <input type="text" [(ngModel)]="message1" placeholder="First message">
+  
+  <label for="message2">Message 2:</label>
+  <input type="text" [(ngModel)]="message2" placeholder="Second message">
+
+  <button (click)="slashOperator()">Trigger Slashing</button>
+  <button (click)="checkDowntime()">Check Downtime</button>
+
+  <h3>Results:</h3>
+  <p *ngIf="result" [ngClass]="{'success': isSuccess, 'error': !isSuccess}">{{ result }}</p>
+</div>
